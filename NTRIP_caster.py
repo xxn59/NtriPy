@@ -70,7 +70,7 @@ class NtripSvrHandler(SocketServer.StreamRequestHandler):
         caster.add_server(self.ntrip_svr)
         self.wfile.write("ICY 200 OK")
         while True:
-            data = self.rfile.read(1024).strip()
+            data = self.rfile.read(256).strip()
             if data is not None:
                 print "received:{} sent:{}".format(caster.bytes_rcved, caster.bytes_sent)
                 self.ntrip_svr.cache(data)
@@ -167,7 +167,7 @@ class NtripCaster:
         handle = SocketServer.ThreadingTCPServer(self.address_svr, NtripSvrHandler)
         print 'waiting for Ntrip servers...'
         self.svr_handle = handle
-        handle.timeout = 10
+        handle.timeout = 0.5
         handle.serve_forever()
 
     def run_clt_handle(self):
