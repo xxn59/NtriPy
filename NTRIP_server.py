@@ -128,17 +128,17 @@ if __name__ == '__main__':
         try:
             s = serial.Serial(SERIAL, 115200, timeout=0.1)
         except serial.SerialException:
-            print 'open com port error:',SERIAL
-            break
+            print 'open com port error:', SERIAL
+            continue
         else:
             break
     start_sending_thread(svr.loop_send)
     while True:
-        # data = s.read(256)
-        data = time.ctime()
+        data = s.read(256)
+        # data = time.ctime()
         # print data
         if len(data) > 0:
             svr.cache(data)
             # f_log.write(data)
             # sc.sendall(data)
-            time.sleep(1)
+            # time.sleep(1)
