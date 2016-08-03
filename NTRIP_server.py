@@ -82,7 +82,8 @@ class NtripServer:
                 try:
                     cnn.sendall(send_buf)
                 except socket.error:
-                    pass
+                    self.connect_all()
+
 
 def req_ntrip_source():
     passwd = "123456"
@@ -108,7 +109,14 @@ if __name__ == '__main__':
     f_log = open("ntrip_server.log", "wb")
     svr = NtripServer()
     svr.connect_all()
-    s = serial.Serial(SERIAL, 115200, timeout=0.1)
+    print "opening in-stream com port..."
+    while True:
+        try:
+            s = serial.Serial(SERIAL, 115200, timeout=0.1)
+        except serial.SerialException:
+            pass
+        else:
+            break
     start_sending_thread(svr.loop_send)
     while True:
         data = s.read(256)
