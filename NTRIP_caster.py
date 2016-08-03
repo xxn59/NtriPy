@@ -190,6 +190,7 @@ class NtripCaster:
         print 'waiting for Ntrip servers...'
         self.svr_handle = handle
         handle.timeout = 0.5
+        handle.allow_reuse_address = True
         handle.serve_forever()
 
     def run_clt_handle(self):
@@ -197,12 +198,14 @@ class NtripCaster:
         print 'waiting for Ntrip clients...'
         self.clt_handle = handle
         handle.timeout = 10
+        handle.allow_reuse_address = True
         handle.serve_forever()
 
     def run_admin_handle(self):
         svr = SocketServer.ThreadingTCPServer(self.admin_address, AdminHandler)
         print 'waiting for admin...'
         svr.timeout = 1
+        svr.allow_reuse_address = True
         svr.serve_forever()
 
     def run_all(self):

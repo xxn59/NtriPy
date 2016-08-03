@@ -20,7 +20,6 @@ SERIAL = '/dev/ttyUSB0'
 class NtripServer:
     def __init__(self, request_handle=None, mount_point=MOUNT_PT, hosts=HOSTS, port=PORT):
         self.status = "init"
-        self.connected = False
         self.target_caster = request_handle
         self.buf = ''
         self.lat = 0.0
@@ -32,9 +31,6 @@ class NtripServer:
         self.remote_port = port
         # self.remote = (host, port)
         self.q = Queue.Queue()
-
-        for h in hosts:
-            self.connection.append(None)
 
     def cache(self, dat):
         if self.q.qsize() > 20480:
@@ -56,7 +52,12 @@ class NtripServer:
 
     def connect_all(self):
         for h in self.hosts:
-            if h in self.connection:
+            valid = False
+            for c in self.connection:
+                if h == c.getpeername()[0]:
+                    valid = True
+            if valid:
+                # print "{} is already connected".format(h)
                 continue
             try:
                 self.connect(h)
@@ -66,12 +67,13 @@ class NtripServer:
     def connect(self, host):
         print "connecting to caster:", host, self.remote_port
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1)
         addr = (host, self.remote_port)
         s.connect(addr)
+        self.connection.append(s)
         s.sendall(req_ntrip_source())
         print s.recv(1024)
-        self.connection.append(host)
-        self.connected = True
+
 
     def shutdown(self):
         for s in self.connection:
@@ -82,13 +84,19 @@ class NtripServer:
             send_buf = self.get_data()
             if send_buf is None:
                 continue
+
             for cnn in self.connection:
+                if cnn is None:
+                    continue
                 try:
                     cnn.sendall(send_buf)
                 except socket.error:
-                    self.connection.remove(cnn.getpeername()[0])
+                    self.connection.remove(cnn)
                     self.connect_all()
-
+                else:
+                    print "sent {}bytes data to {}".format(len(send_buf), cnn.getpeername())
+            if len(self.connection) < len(self.hosts):
+                self.connect_all()
 
 def req_ntrip_source():
     passwd = "123456"
@@ -106,6 +114,7 @@ def req_ntrip_source():
 def start_sending_thread(t):
     from threading import Thread
 
+    print "start sending thread..."
     t = Thread(target=t)
     t.setDaemon(True)
     t.start()
@@ -119,16 +128,17 @@ if __name__ == '__main__':
         try:
             s = serial.Serial(SERIAL, 115200, timeout=0.1)
         except serial.SerialException:
-            pass
+            print 'open com port error:',SERIAL
+            break
         else:
             break
     start_sending_thread(svr.loop_send)
     while True:
-        data = s.read(256)
-        # data = time.ctime()
+        # data = s.read(256)
+        data = time.ctime()
+        # print data
         if len(data) > 0:
-            print "sent {}bytes data to {}".format(len(data), HOSTS)
             svr.cache(data)
             # f_log.write(data)
             # sc.sendall(data)
-            # time.sleep(1)
+            time.sleep(1)
