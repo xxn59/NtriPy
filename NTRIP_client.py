@@ -6,17 +6,18 @@ from functools import reduce
 import operator
 import Queue
 import logging
+from viewer import decode_rtcm_stream
 # from generate_sol import SolGenerator
 # from RTCMv3_decode import decode_rtcm3_from_net, set_generator
 
 # dummyNMEA = "$GPGGA,100429.20,2232.1120000,N,11356.5668000,E,1,00,1.0,3.428,M,-3.428,M,0.0,*5C"
-# my_host = "120.76.233.44"
+HOST = "120.76.233.44"
 username = "P_dji1"  # username for RTCM correction service
 password = "efb136d"  # password for RTCM correction service
-my_host = "rtk.qxwz.com"
-port = 8001  # port for the service
+# my_host = "rtk.qxwz.com"
+# port = 8001  # port for the service
 # my_host = "127.0.0.1"
-# port = 50007  # port for the service
+port = 50008  # port for the service
 MOUNT_PT = "RTCM32_GGB"
 
 '''Generate an encoding of the username:password for the service.
@@ -59,18 +60,22 @@ def generate_gga():
     return gga_str
 
 
-def recv_from_svr(s, callback, logger):
+def recv_from_svr(s, callback):
     # f = open("ntrip.sol", "w")
     # f_log = open("qxwz_rtcm32_ggb.log", "wb")
     # sg = SolGenerator(f)
     # set_generator(sg)
     while True:
-        dat = s.recv(2048)
+        try:
+            dat = s.recv(2048)
+        except socket.error:
+            pass
 
         if len(dat) > 0:
             # print len(dat)
-            print dat
-            callback(logger, dat)
+            # print dat
+            callback(dat)
+            # decode_rtcm_stream(dat)
             # f_log.writelines(dat)
             # decode_rtcm3_from_net(dat)
 
@@ -90,7 +95,7 @@ def start_gga_sending(s):
 
 
 class NtripClient:
-    def __init__(self, request_handle, mount_point, pass_phrase):
+    def __init__(self, request_handle, mount_point=MOUNT_PT, pass_phrase=pwd):
         self.status = "init"
         self.connected = False
         self.source_caster = request_handle.server
@@ -128,7 +133,7 @@ class NtripClient:
 def init_logger():
     LOG_FILE = 'ntrip_client.log'
 
-    handler = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=1024 * 1024, backupCount=5)
+    handler = logging.FileHandler(LOG_FILE)
     # fmt = '%(asctime)s-%(filename)s:%(lineno)s-%(name)s-%(message)s'
     fmt = '%(message)s'
 
@@ -152,7 +157,8 @@ def log_com_data(logger, data):
 if __name__ == '__main__':
     logger = init_logger()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((my_host, int(port)))
+    s.settimeout(0.5)
+    s.connect((HOST, int(port)))
 
     print("Header sending... \n")
     s.send(header.encode('ascii'))
@@ -161,5 +167,5 @@ if __name__ == '__main__':
     # data = s.recv(12).decode('ascii')
     # print(data)
     start_gga_sending(s)
-    recv_from_svr(s, log_com_data, logger)
+    recv_from_svr(s, decode_rtcm_stream)
     s.close()

@@ -10,7 +10,7 @@ HOST = "10.80.57.162"
 PORT = 50007
 
 
-# rf = open("qxwz_rtcm32_ggb.log", "rb")
+rf = open("caster.log", "wb")
 
 class RequestHandler(SocketServer.BaseRequestHandler):
     def handle(self):
@@ -70,10 +70,11 @@ class NtripSvrHandler(SocketServer.StreamRequestHandler):
         caster.add_server(self.ntrip_svr)
         self.wfile.write("ICY 200 OK")
         while True:
-            data = self.rfile.read(256).strip()
+            data = self.rfile.read(256)
             if data is not None:
-                print "received:{} sent:{}".format(caster.bytes_rcved, caster.bytes_sent)
+                # print "received:{} sent:{}".format(caster.bytes_rcved, caster.bytes_sent)
                 self.ntrip_svr.cache(data)
+                # rf.write(data)
                 caster.bytes_rcved += len(data)
 
     def finish(self):
@@ -104,6 +105,25 @@ class NtripCltHandler(SocketServer.StreamRequestHandler):
         caster.del_client(self.ntrip_clt)
         print "client removed"
 
+class AdminHandler(SocketServer.StreamRequestHandler):
+    def handle(self):
+        print 'ADMIN port connected from', self.client_address
+        header = self.request.recv(32).strip()
+        if not verify_auth_info(header):
+            return
+        print header
+        while True:
+            info = "[{}]".format(time.ctime())
+            info = "connected clients:{}, servers:{}\n".format(len(caster.clients), len(caster.servers))
+            self.wfile.write(info)
+            info = "received:{}, sent:{}\n".format(caster.bytes_rcved, caster.bytes_sent)
+            self.wfile.write(info)
+            time.sleep(1)
+
+
+
+def verify_auth_info(header): # todo: verify the account and passphrase
+    return True
 
 def handle_ntrip_client_data(data):
     pass
@@ -149,13 +169,14 @@ def decode_ntrip_header(buff):
 
 
 class NtripCaster:
-    def __init__(self, host="0.0.0.0", server_port=50007, client_port=50008, max_server=1, max_client=1,
+    def __init__(self, host="0.0.0.0", server_port=50007, client_port=50008, admin_port=51000, max_server=1, max_client=1,
                  name="C_DJI_NTRIP_1.0_2938"):
         self.running = False
         self.servers = []
         self.clients = []
         self.address_svr = (host, server_port)
         self.address_clt = (host, client_port)
+        self.admin_address = (host, admin_port)
         self.max_server = max_server
         self.max_client = max_client
         self.svr_handle = None
@@ -178,6 +199,12 @@ class NtripCaster:
         handle.timeout = 10
         handle.serve_forever()
 
+    def run_admin_handle(self):
+        svr = SocketServer.ThreadingTCPServer(self.admin_address, AdminHandler)
+        print 'waiting for admin...'
+        svr.timeout = 1
+        svr.serve_forever()
+
     def run_all(self):
         from threading import Thread
 
@@ -194,6 +221,10 @@ class NtripCaster:
         t3 = Thread(target=self.run_clt_handle)
         t3.setDaemon(True)
         t3.start()
+
+        t4 = Thread(target=self.run_admin_handle)
+        t4.setDaemon(True)
+        t4.start()
 
     def run_router(self):
         while True:

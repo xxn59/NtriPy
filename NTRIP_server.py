@@ -5,8 +5,8 @@ import Queue
 from threading import Thread
 
 MOUNT_PT = "RTCM32_GGB"
-HOSTS = ["120.76.233.44",  # aliyun
-         "119.29.114.47"]  # tencent
+HOSTS = ["120.76.233.44",]  # aliyun
+         # "119.29.114.47"]  # tencent
 
 # HOST = "10.81.0.39"
 # HOST = "127.0.0.1"
