@@ -33,6 +33,9 @@ class NtripServer:
         # self.remote = (host, port)
         self.q = Queue.Queue()
 
+        for h in hosts:
+            self.connection.append(None)
+
     def cache(self, dat):
         if self.q.qsize() > 20480:
             return
@@ -53,6 +56,8 @@ class NtripServer:
 
     def connect_all(self):
         for h in self.hosts:
+            if h in self.connection:
+                continue
             try:
                 self.connect(h)
             except socket.error:
@@ -65,7 +70,7 @@ class NtripServer:
         s.connect(addr)
         s.sendall(req_ntrip_source())
         print s.recv(1024)
-        self.connection.append(s)
+        self.connection.append(host)
         self.connected = True
 
     def shutdown(self):
@@ -73,7 +78,6 @@ class NtripServer:
             s.close()
 
     def loop_send(self):
-
         while True:
             send_buf = self.get_data()
             if send_buf is None:
@@ -82,6 +86,7 @@ class NtripServer:
                 try:
                     cnn.sendall(send_buf)
                 except socket.error:
+                    self.connection.remove(cnn.getpeername()[0])
                     self.connect_all()
 
 
