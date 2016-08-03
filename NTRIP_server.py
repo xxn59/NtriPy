@@ -63,9 +63,11 @@ class NtripServer:
                 self.connect(h)
             except socket.error:
                 pass
+        if len(self.connection) == 0:
+            time.sleep(2)
 
     def connect(self, host):
-        print "connecting to caster:", host, self.remote_port
+        print "[{}]connecting to caster:".format(time.ctime()), host, self.remote_port
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(1)
         addr = (host, self.remote_port)
