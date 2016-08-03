@@ -6,7 +6,7 @@ from functools import reduce
 import operator
 import Queue
 import logging
-from viewer import decode_rtcm_stream
+
 # from generate_sol import SolGenerator
 # from RTCMv3_decode import decode_rtcm3_from_net, set_generator
 
@@ -155,6 +155,8 @@ def log_com_data(logger, data):
 
 
 if __name__ == '__main__':
+    from viewer import decode_rtcm_stream
+
     logger = init_logger()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(0.5)
