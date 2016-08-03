@@ -102,6 +102,7 @@ class NtripCltHandler(SocketServer.StreamRequestHandler):
 
     def finish(self):
         caster.del_client(self.ntrip_clt)
+        print "client removed"
 
 
 def handle_ntrip_client_data(data):
