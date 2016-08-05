@@ -57,6 +57,10 @@ class RequestHandler(SocketServer.BaseRequestHandler):
 
 
 class NtripSvrHandler(SocketServer.StreamRequestHandler):
+    def __init__(self, request, client_address, server):
+        SocketServer.StreamRequestHandler.__init__(self, request, client_address, server)
+        self.ntrip_svr = None
+
     def handle(self):
         print '...connected from:', self.client_address
         header = self.request.recv(1024).strip()
@@ -82,6 +86,10 @@ class NtripSvrHandler(SocketServer.StreamRequestHandler):
 
 
 class NtripCltHandler(SocketServer.StreamRequestHandler):
+    def __init__(self, request, client_address, server):
+        SocketServer.StreamRequestHandler.__init__(self, request, client_address, server)
+        self.ntrip_clt = None
+
     def handle(self):
         print '...connected from:', self.client_address
         header = self.request.recv(1024).strip()
@@ -98,8 +106,11 @@ class NtripCltHandler(SocketServer.StreamRequestHandler):
             # data = self.rfile.read(1024).strip()
             resp = self.ntrip_clt.get_data()
             if resp is not None:
-                self.wfile.write(resp)
-                caster.bytes_sent += len(resp)
+                try:
+                    self.wfile.write(resp)
+                    caster.bytes_sent += len(resp)
+                except socket.error:
+                    print "error when sending response"
 
     def finish(self):
         caster.del_client(self.ntrip_clt)
@@ -123,6 +134,8 @@ class AdminHandler(SocketServer.StreamRequestHandler):
 
 
 def verify_auth_info(header): # todo: verify the account and passphrase
+    if header != 'caster status report':
+        return False
     return True
 
 def handle_ntrip_client_data(data):
